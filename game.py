@@ -13,9 +13,9 @@ fps = 60
 
 
 #set window height and width
-screen_widht =  320 
+screen_width =  320 
 screen_height = 240
-screen = pygame.display.set_mode((screen_widht, screen_height))
+screen = pygame.display.set_mode((screen_width, screen_height))
 
 #load header
 pygame.display.set_caption("Flappy Bird")
@@ -24,7 +24,13 @@ pygame.display.set_caption("Flappy Bird")
 #load assets
 bg = pygame.image.load("assets/bg.png")
 ground_img = pygame.image.load("assets/ground.png")
+button_img =  pygame.image.load("assets/restart.png")
 
+#define font
+font = pygame.font.SysFont('Bauhaus 93', 27)
+
+#define colours
+white = (255, 255, 255)
 
 #Game variables 
 
@@ -38,8 +44,18 @@ last_pipe = pygame.time.get_ticks() - pipe_frequency
 score = 0
 pass_pipe = False 
 
-
-
+#Drawing text
+def draw_text(text, font, text_col, x, y):
+	img = font.render(text, True, text_col)
+	screen.blit(img, (x, y))
+ 
+ 
+def reset_game():
+	pipe_group.empty()
+	flappy.rect.x = 100
+	flappy.rect.y = int(screen_height / 2)
+	score = 0
+	return score
 
 
 
@@ -63,7 +79,6 @@ class Bird(pygame.sprite.Sprite):
         if flying: 
         #Gravity
             self.vel += 0.2
-            print(self.vel)
             if self.vel > 4:
                 self.vel = 4
             
@@ -120,11 +135,42 @@ class Pipe(pygame.sprite.Sprite):
         
         if self.rect.right < 0: 
             self.kill()
-            
+
+
+
+
+class Button():
+	def __init__(self, x, y, image):
+		self.image = image
+		self.rect = self.image.get_rect()
+		self.rect.topleft = (x, y)
+
+	def draw(self):
+
+		action = False
+
+		#get mouse position
+		pos = pygame.mouse.get_pos()
+
+		#check if mouse is over the button
+		if self.rect.collidepoint(pos):
+			if pygame.mouse.get_pressed()[0] == 1:
+				action = True
+
+		#draw button
+		screen.blit(self.image, (self.rect.x, self.rect.y))
+
+		return action
+
+
+
 bird_group = pygame.sprite.Group()
 pipe_group = pygame.sprite.Group()
 
 flappy = Bird(30, int(screen_height/2))
+
+#Instance of the button class
+button = Button(screen_width // 2 -21 , screen_height // 2 -10, button_img)
 
 bird_group.add(flappy)
 
@@ -162,8 +208,19 @@ while run:
     
     #Check the score 
     if (len(pipe_group) > 0): 
-        if bird_group.sprites[0]().rect.left() > pipe_group.sprites[0]().rect.left()\
-            and bird_group.sprites[0]().rect.right() > pipe_group.sprites[0]().rect.right():
+        if bird_group.sprites()[0].rect.left > pipe_group.sprites()[0].rect.left\
+            and bird_group.sprites()[0].rect.right < pipe_group.sprites()[0].rect.right \
+                and pass_pipe == False:
+                    pass_pipe = True
+        if pass_pipe == True:
+            if bird_group.sprites()[0].rect.left > pipe_group.sprites()[0].rect.right:
+                score += 1
+                pass_pipe = False
+    
+    #Draw it on the screen
+    draw_text(str(score), font, white, int(screen_width / 2), 17)
+
+            
             
             
         
@@ -187,14 +244,14 @@ while run:
         if time_now - last_pipe > pipe_frequency:
             pipe_height = random.randint(-33,20)
            
-            btm_pipe  = Pipe(screen_widht, int(screen_height/2)+pipe_height, 1)
-            top_pipe  = Pipe(screen_widht, int(screen_height/2)+pipe_height, -1)
+            btm_pipe  = Pipe(screen_width, int(screen_height/2)+pipe_height, 1)
+            top_pipe  = Pipe(screen_width, int(screen_height/2)+pipe_height, -1)
             pipe_group.add(btm_pipe)
             pipe_group.add(top_pipe)
             last_pipe = time_now
  
         
-        
+   
         
         #Group scrolling effect
         ground_scroll -= scroll_speed
@@ -203,6 +260,14 @@ while run:
     
  
         pipe_group.update()
+        
+        
+        
+    #check for game over and reset
+    if game_over == True:
+        if button.draw() == True:
+            game_over = False
+            score = reset_game()
     
     
     #If exit, exit screen
